@@ -1,0 +1,13 @@
+node_modules/
+dist/
+*.log
+.playwright/
+.playwright-test/
+.playwright-report/
+.cache/
+.env
+.env.local
+.env.*.local
+.DS_Store
+.idea/
+.vscode/

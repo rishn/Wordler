@@ -84,10 +84,30 @@ app.get('/api/nyt-sse', async (req, res) => {
     const headless = true
     log(`Launching browser (headless=${headless})`)
     browser = await chromium.launch({ headless })
-    page = await browser.newPage()
+    // Use a fresh incognito context to avoid persisted state
+    const context = await browser.newContext()
+    page = await context.newPage()
     log('Opening NYT Wordle')
     await page.goto('https://www.nytimes.com/games/wordle/index.html', { waitUntil: 'domcontentloaded' })
     await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {})
+
+    // Clear service workers, storages, and caches to avoid stale puzzles, then reload
+    await page.evaluate(async () => {
+      try {
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          for (const reg of regs) await reg.unregister();
+        }
+      } catch {}
+      try { localStorage.clear(); sessionStorage.clear(); } catch {}
+      try {
+        if (('caches' in window) && caches.keys) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(k => caches.delete(k)));
+        }
+      } catch {}
+    })
+    await page.reload({ waitUntil: 'networkidle' }).catch(() => {})
 
     await clickPlayIfPresent(page, log)
     await closeIntroModalIfPresent(page, log)
@@ -167,10 +187,30 @@ app.get('/api/nyt-solve', async (req, res) => {
     const headless = true
     log(`Launching browser (headless=${headless})...`)
     browser = await chromium.launch({ headless })
-    page = await browser.newPage()
+    // Fresh context per run to avoid stale service worker or storage
+    const context = await browser.newContext()
+    page = await context.newPage()
     log('Opening NYT Wordle...')
     await page.goto('https://www.nytimes.com/games/wordle/index.html', { waitUntil: 'domcontentloaded' })
-  await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {})
+    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {})
+
+    // Clear SW, storage, and caches to force today's puzzle
+    await page.evaluate(async () => {
+      try {
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          for (const reg of regs) await reg.unregister();
+        }
+      } catch {}
+      try { localStorage.clear(); sessionStorage.clear(); } catch {}
+      try {
+        if (('caches' in window) && caches.keys) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(k => caches.delete(k)));
+        }
+      } catch {}
+    })
+    await page.reload({ waitUntil: 'networkidle' }).catch(() => {})
 
     // 1) Click the big Play button if present
     await clickPlayIfPresent(page, log)

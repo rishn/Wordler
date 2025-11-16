@@ -84,8 +84,9 @@ app.get('/api/nyt-sse', async (req, res) => {
     const headless = true
     log(`Launching browser (headless=${headless})`)
     browser = await chromium.launch({ headless })
-    // Use a fresh incognito context to avoid persisted state
-    const context = await browser.newContext()
+  // Use a fresh incognito context to avoid persisted state
+  // Force timezone to Eastern (NYT uses ET for daily puzzle boundaries) and locale to en-US
+  const context = await browser.newContext({ timezoneId: 'America/New_York', locale: 'en-US' })
     page = await context.newPage()
     log('Opening NYT Wordle')
     await page.goto('https://www.nytimes.com/games/wordle/index.html', { waitUntil: 'domcontentloaded' })
@@ -187,8 +188,9 @@ app.get('/api/nyt-solve', async (req, res) => {
     const headless = true
     log(`Launching browser (headless=${headless})...`)
     browser = await chromium.launch({ headless })
-    // Fresh context per run to avoid stale service worker or storage
-    const context = await browser.newContext()
+  // Fresh context per run to avoid stale service worker or storage
+  // Force timezone to Eastern (NYT uses ET for daily puzzle boundaries) and locale to en-US
+  const context = await browser.newContext({ timezoneId: 'America/New_York', locale: 'en-US' })
     page = await context.newPage()
     log('Opening NYT Wordle...')
     await page.goto('https://www.nytimes.com/games/wordle/index.html', { waitUntil: 'domcontentloaded' })

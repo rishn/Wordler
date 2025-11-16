@@ -4,14 +4,14 @@ FROM mcr.microsoft.com/playwright:v1.49.0-jammy
 ENV NODE_ENV=production \
     PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
-WORKDIR /usr/src/app
+WORKDIR /usr/src/app/server
 
 # Install dependencies (include dev to allow TypeScript build)
-COPY package*.json ./
+COPY server/package*.json ./
 RUN npm ci --include=dev
 
 # Copy server sources and build
-COPY . ./
+COPY server/ ./
 RUN npm run build
 
 # Expose the port (server defaults to 4000 if PORT not set)

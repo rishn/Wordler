@@ -19,6 +19,9 @@
 	},
 	"devDependencies": {
 		"tsx": "^4.19.0",
-		"typescript": "^5.4.0"
+		"typescript": "^5.4.0",
+		"@types/express": "^4.17.17",
+		"@types/cors": "^2.8.12",
+		"@types/node": "^20.11.30"
 	}
 }

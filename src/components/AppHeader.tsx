@@ -3,14 +3,20 @@ import ThemeToggle from './ThemeToggle'
 import { useAuth } from '../contexts/AuthContext'
 import { LogOut } from 'lucide-react'
 
+/* Header component that includes navigation links, user info, logout button, and theme toggle. */
 export default function AppHeader() {
   const { pathname } = useLocation()
   const { user, logout } = useAuth()
   const isHome = pathname === '/'
   const isHistory = pathname === '/history'
+  const isAbout = pathname === '/about'
   const active = 'text-gray-900 dark:text-gray-100 font-medium'
   const inactive = 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
 
+  /**
+   * The function `handleLogout` logs out the user and handles any errors that occur during the
+   * process.
+   */
   const handleLogout = async () => {
     try {
       await logout()
@@ -21,18 +27,19 @@ export default function AppHeader() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 grid grid-cols-3 items-center px-5 py-3 border-b dark:border-zinc-700 bg-[#f5f5f5] dark:bg-[#18181b]">
-      <div className="justify-self-start flex items-center gap-2">
+        <div className="justify-self-start flex items-center gap-2">
         <img src="/logo.png" alt="Wordler Logo" className="h-8 w-8" />
         <Link to="/" className="text-xl font-semibold tracking-tight">Wordler</Link>
       </div>
       <nav className="justify-self-center flex gap-4">
         <Link to="/" className={`text-sm transition-colors ${isHome ? active : inactive}`}>Home</Link>
         <Link to="/history" className={`text-sm transition-colors ${isHistory ? active : inactive}`}>History</Link>
+        <Link to="/about" className={`text-sm transition-colors ${isAbout ? active : inactive}`}>About Us</Link>
       </nav>
       <div className="justify-self-end flex items-center gap-3">
         {user && (
           <>
-            <span className="text-xs text-gray-600 dark:text-gray-400 hidden md:inline">{user.email}</span>
+            <Link to="/profile" className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hidden md:inline">{user.email}</Link>
             <button
               onClick={handleLogout}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-gray-200 dark:bg-zinc-800 hover:bg-gray-300 dark:hover:bg-zinc-700 transition-colors"

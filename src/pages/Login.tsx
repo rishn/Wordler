@@ -14,6 +14,17 @@ export default function Login() {
   const { login, signup } = useAuth()
   const navigate = useNavigate()
 
+  /**
+   * The function handles form submission in a TypeScript React application, performing validation,
+   * authentication, and error handling.
+   * @param e - The parameter `e` in the `handleSubmit` function is of type `React.FormEvent`. This is
+   * a synthetic event type defined in React that represents the event that occurs when a form is
+   * submitted. In this case, the function is handling the form submission event and preventing the
+   * default behavior using `e
+   * @returns The function `handleSubmit` returns either an error message if there is a validation
+   * error or an authentication error, or it navigates to the home page if the login or signup is
+   * successful.
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')

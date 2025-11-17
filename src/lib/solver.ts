@@ -32,6 +32,18 @@ export function getAllowedList(): string[] {
   return runtimeAllowed
 }
 
+/**
+ * The function `scorePattern` takes a guess and an answer, and returns a pattern indicating the
+ * correctness of each character in the guess compared to the answer.
+ * @param {string} guessRaw - The `guessRaw` parameter is a string representing the user's guess for a
+ * pattern.
+ * @param {string} answerRaw - The `answerRaw` parameter in the `scorePattern` function represents the
+ * raw string input that contains the correct answer pattern. This string is converted to lowercase and
+ * used to compare against the `guessRaw` parameter to determine the score pattern for the guessing
+ * game.
+ * @returns The function `scorePattern` returns a `Pattern`, which is an array of `PatternChar`
+ * elements.
+ */
 function scorePattern(guessRaw: string, answerRaw: string): Pattern {
   const guess = guessRaw.toLowerCase()
   const answer = answerRaw.toLowerCase()
@@ -60,6 +72,13 @@ function scorePattern(guessRaw: string, answerRaw: string): Pattern {
   return res
 }
 
+/**
+ * The functions provided are used for generating keys from patterns, checking consistency between
+ * guesses and patterns, and filtering candidates based on history.
+ * @param {Pattern} p - Pattern - an array of characters representing a pattern
+ * @returns The `filterCandidates` function is returning an array of strings that pass the consistency
+ * check with all the patterns in the `history` array of `GuessResult` objects.
+ */
 export function patternToKey(p: Pattern): string {
   return p.join('')
 }
@@ -73,6 +92,18 @@ export function filterCandidates(history: GuessResult[]): string[] {
   return runtimeAnswers.filter(ans => history.every(h => consistent(h.guess, h.pattern, ans)))
 }
 
+/**
+ * The function calculates the entropy of a guess compared to a list of candidates based on a scoring
+ * pattern.
+ * @param {string} guess - The `guess` parameter is a string representing a guess at a solution or
+ * answer. It is used in the `entropyForGuess` function to calculate the entropy based on this guess
+ * and a list of candidate answers.
+ * @param {string[]} candidates - The `candidates` parameter in the `entropyForGuess` function is an
+ * array of strings representing possible answers or guesses. The function calculates the entropy of
+ * the guesses based on a given guess and the list of candidates.
+ * @returns The function `entropyForGuess` returns the entropy value calculated based on the guess
+ * provided and a list of candidate answers.
+ */
 export function entropyForGuess(guess: string, candidates: string[]): number {
   const map = new Map<string, number>()
   for (const ans of candidates) {
@@ -139,6 +170,20 @@ type Constraints = {
   seenLetters: Set<string>
 }
 
+/**
+ * The function `deriveConstraints` analyzes a history of guess results to derive constraints for a
+ * guessing game.
+ * @param {GuessResult[]} history - The `history` parameter in the `deriveConstraints` function is an
+ * array of `GuessResult` objects. Each `GuessResult` object contains information about a guess made in
+ * a game. The `GuessResult` object typically includes the guess itself (a string of 5 characters), as
+ * well as
+ * @returns The function `deriveConstraints` returns an object of type `Constraints` containing the
+ * following properties:
+ * - `fixed`: An array of strings or null values representing fixed positions in the guess history.
+ * - `forbiddenPos`: A map where keys are strings representing letters and values are sets of numbers
+ * representing forbidden positions for each letter.
+ * - `minCount`: A map where keys are strings representing letters and values
+ */
 function deriveConstraints(history: GuessResult[]): Constraints {
   const fixed: (string | null)[] = [null, null, null, null, null]
   const forbiddenPos = new Map<string, Set<number>>()
@@ -193,6 +238,15 @@ function deriveConstraints(history: GuessResult[]): Constraints {
   return { fixed, forbiddenPos, minCount, excluded, prevGuesses, seenLetters }
 }
 
+/**
+ * The function `fitsConstraints` checks if a given word meets specified constraints related to fixed
+ * positions, forbidden positions, excluded letters, and minimum counts for letters.
+ * @param {string} word - The `word` parameter is a string that represents a word.
+ * @param {Constraints} c - Constraints object containing the following properties:
+ * @returns The function `fitsConstraints` returns a boolean value, either `true` if the input word
+ * satisfies all the constraints specified in the `c` object, or `false` if the word does not meet one
+ * or more of the constraints.
+ */
 function fitsConstraints(word: string, c: Constraints): boolean {
   word = word.toLowerCase()
   // Fixed positions
@@ -230,6 +284,19 @@ function getLetterFreq(): Map<string, number> {
   return freq
 }
 
+/**
+ * The function `scoreExploration` calculates a score for a given word based on letter frequency and
+ * constraints, prioritizing unseen letters and penalizing previously guessed words.
+ * @param {string} word - The `word` parameter in the `scoreExploration` function is a string
+ * representing a word that is being evaluated for its score based on certain constraints. The function
+ * calculates a score for the word based on the frequency of its letters and whether those letters have
+ * been seen before or not. The score is
+ * @param {Constraints} c - Constraints object containing the following properties:
+ * @returns The `scoreExploration` function returns a number, which represents the score calculated
+ * based on the input word and constraints provided. The score is calculated by considering the
+ * frequency of letters in the word, giving a bonus for unseen letters to maximize information, and
+ * applying a slight penalty if the word has already been guessed before.
+ */
 function scoreExploration(word: string, c: Constraints): number {
   const freq = getLetterFreq()
   let score = 0
@@ -263,6 +330,27 @@ export type ScoreBreakdown = {
   }
 }
 
+/**
+ * The function `scoreWordWithConstraints` calculates a score breakdown for a given word based on
+ * constraints and candidate words.
+ * @param {string} word - The `word` parameter is a string representing the word for which you want to
+ * calculate the score based on the given constraints and candidate words.
+ * @param {string[]} candidates - The `candidates` parameter in the `scoreWordWithConstraints` function
+ * represents an array of strings that are potential guesses or words that the user can choose from.
+ * These candidates are used to calculate the entropy score for the given word based on the likelihood
+ * of each candidate being the correct word.
+ * @param {Constraints} constraints - The `constraints` parameter in the `scoreWordWithConstraints`
+ * function represents the constraints that need to be considered when scoring a word. It includes the
+ * following properties:
+ * @returns The function `scoreWordWithConstraints` returns a `ScoreBreakdown` object which contains
+ * the following properties:
+ * - `word`: the input word being scored
+ * - `entropy`: the entropy value calculated for the word based on the candidates
+ * - `coverage`: the percentage of required letters present in the word
+ * - `newLetterBonus`: bonus points for each new letter in the word that has not been seen before
+ * - `positional`: score based on correct letter positions and allowed positions
+ * - `penalty`: penalty points for excluded letters and repeated letters  
+ */
 function scoreWordWithConstraints(word: string, candidates: string[], constraints: Constraints): ScoreBreakdown {
   const entropy = entropyForGuess(word, candidates)
   const requiredLetters = [...constraints.minCount.keys()].filter(l => !constraints.excluded.has(l))
@@ -299,11 +387,35 @@ function scoreWordWithConstraints(word: string, candidates: string[], constraint
   }
 }
 
+/**
+ * The function `computePickDetails` takes a word, a list of candidates, and a history of guess results
+ * as input, derives constraints from the history, and then scores the word against the candidates
+ * based on those constraints.
+ * @param {string} word - The `word` parameter is a string representing the word that needs to be
+ * scored against the list of candidate words based on certain constraints derived from the history of
+ * previous guesses.
+ * @param {string[]} candidates - An array of strings representing possible guesses or choices.
+ * @param {GuessResult[]} history - The `history` parameter is an array of `GuessResult` objects. Each
+ * `GuessResult` object contains information about a previous guess, such as the guessed word, the
+ * number of correct letters in the guess, and the number of correct letters in the correct position.
+ * @returns The function `computePickDetails` returns a `ScoreBreakdown` object, which is the result of
+ * scoring a given word against a list of candidates based on the constraints derived from the history
+ * of previous guesses.
+ */
 export function computePickDetails(word: string, candidates: string[], history: GuessResult[]): ScoreBreakdown {
   const constraints = deriveConstraints(history)
   return scoreWordWithConstraints(word, candidates, constraints)
 }
 
+/**
+ * The `fallbackExplorationGuess` function in TypeScript selects a word based on constraints and letter
+ * coverage frequency for exploration in a guessing game.
+ * @param {GuessResult[]} history - The `history` parameter in the `fallbackExplorationGuess` function
+ * is an array of `GuessResult` objects. These objects likely contain information about previous
+ * guesses made during a game or exploration process.
+ * @returns The function `fallbackExplorationGuess` returns a string, which is the word to be guessed
+ * next based on the provided history of guess results.
+ */
 function fallbackExplorationGuess(history: GuessResult[]): string {
   const c = deriveConstraints(history)
   // filter allowed by constraints and not previously guessed
@@ -320,6 +432,17 @@ function fallbackExplorationGuess(history: GuessResult[]): string {
   return pool[0]
 }
 
+/**
+ * The function `solve` in TypeScript implements a Wordle-like game where the goal is to guess a hidden
+ * word within 6 attempts.
+ * @param {string} [answer] - The `answer` parameter in the `solve` function is an optional string
+ * parameter that represents the target word to be guessed in a Wordle-like game. If provided, the
+ * function will attempt to solve the game using the provided answer. If not provided, a random answer
+ * will be selected from a predefined
+ * @returns The `solve` function returns a `SolveSummary` object, which contains information about the
+ * solving process. The function can return either a successful or unsuccessful result, along with the
+ * answer and the steps taken during the solving process.
+ */
 export function solve(answer?: string): SolveSummary {
   const theAnswer = (answer ?? runtimeAnswers[Math.floor(Math.random() * runtimeAnswers.length)]).toLowerCase()
   const steps: GuessResult[] = []

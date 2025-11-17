@@ -7,6 +7,8 @@ import { Home, Trash2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { subscribeToHistory, deleteHistoryEntry, clearAllHistory as clearAllFirestoreHistory, type HistoryEntry } from '../lib/historyService'
 
+/* The `History` component displays a user's past Wordle solving attempts, allowing them to view details of each attempt,
+delete individual entries, and clear their entire history. It features an animated background and a fixed header and footer. */
 export default function History() {
   const { user } = useAuth()
   const [history, setHistory] = useState<HistoryEntry[]>([])
@@ -23,6 +25,15 @@ export default function History() {
     return () => unsubscribe()
   }, [user])
 
+  /**
+   * The function `clearAllHistory` clears the entire history after confirming with the user and
+   * handling any errors that may occur.
+   * @returns The `clearAllHistory` function is an asynchronous function that clears the entire history
+   * for a user. If there is no user logged in, the function will return early. If the user confirms
+   * the action to clear the history, it will attempt to clear the history in Firestore using the
+   * `clearAllFirestoreHistory` function and then set the history to an empty array. If there is an
+   * error during this process, it will log the error and alert the user.
+   */
   const clearAllHistory = async () => {
     if (!user) return
     if (confirm('Are you sure you want to clear entire history? This cannot be undone.')) {
@@ -36,6 +47,14 @@ export default function History() {
     }
   }
 
+  /**
+   * This function deletes a history entry by its ID and updates the state if the entry is currently
+   * open.
+   * @param {number} id - The `id` parameter in the `deleteEntry` function is a number that represents
+   * the unique identifier of the entry that needs to be deleted.
+   * @returns If the `user` is not defined, the function will return early and not execute the rest of
+   * the code block.
+   */
   const deleteEntry = async (id: number) => {
     if (!user) return
     try {
@@ -47,11 +66,19 @@ export default function History() {
     }
   }
 
+  /**
+   * This function `tagClass` returns a CSS class based on the `mode` value from a `HistoryEntry`
+   * object in TypeScript React.
+   * @param mode - The `mode` parameter in the `tagClass` function is expected to be a string
+   * representing the mode of a `HistoryEntry`. The possible values for `mode` are 'nyt', 'random',
+   * 'simulation', or any other value.
+   */
   const tagClass = (mode: HistoryEntry['mode']) =>
     mode === 'nyt' ? 'bg-emerald-600/15 text-emerald-700 dark:text-emerald-300'
-    : mode === 'random' ? 'bg-indigo-600/15 text-indigo-700 dark:text-indigo-300'
-    : mode === 'simulation' ? 'bg-sky-600/15 text-sky-700 dark:text-sky-300'
-    : 'bg-gray-500/15 text-gray-700 dark:text-gray-300'
+      : mode === 'random' ? 'bg-indigo-600/15 text-indigo-700 dark:text-indigo-300'
+        : mode === 'simulation' ? 'bg-sky-600/15 text-sky-700 dark:text-sky-300'
+          : 'bg-gray-500/15 text-gray-700 dark:text-gray-300'
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 text-gray-900 dark:text-zinc-100 flex flex-col">
       <AppHeader />
@@ -59,7 +86,7 @@ export default function History() {
       {/* Animated grid background - fixed position, starts below header */}
       <div className="fixed top-[60px] left-0 right-0 bottom-[60px] overflow-hidden z-5">
         <AnimatedGridBackground
-          palette={['#6AAA64','#6AAA64','#C9B458','#C9B458','#6366F1','#EC4899','#787C7E','#878A8C']}
+          palette={['#6AAA64', '#6AAA64', '#C9B458', '#C9B458', '#6366F1', '#EC4899', '#787C7E', '#878A8C']}
           rows={30}
           cols={60}
           opacity={0.40}
@@ -153,14 +180,20 @@ export default function History() {
           })}
         </ul>
       </main>
-      <footer className="fixed bottom-0 left-0 right-0 z-50 py-6 text-center text-xs text-gray-600 dark:text-gray-400 bg-[#f5f5f5] dark:bg-[#18181b]">Wordler © 2025</footer>
+      {/* Footer with fixed position at the bottom */}
+      <footer className="fixed bottom-0 left-0 right-0 z-50 py-6 text-center text-xs text-gray-600 dark:text-gray-400 bg-[#f5f5f5] dark:bg-[#18181b]">Wordler by Educify™ An EduTech Enterprise 2025</footer>
       <div className="pb-[60px]" /> {/* Spacer for fixed footer */}
     </div>
   )
 }
 
+/**
+ * The MiniGrid function in TypeScript React renders a grid with 6 rows and 5 columns, displaying
+ * guesses and patterns based on the provided steps data.
+ * @param  - The `MiniGrid` component takes a prop `steps` which is an array of objects.
+ */
 function MiniGrid({ steps }: { steps: SolveSummary['steps'] }) {
-  const rows = Array.from({ length: 6 }, (_, i) => steps[i] || { guess: '', pattern: ['b','b','b','b','b'], remaining: 0 })
+  const rows = Array.from({ length: 6 }, (_, i) => steps[i] || { guess: '', pattern: ['b', 'b', 'b', 'b', 'b'], remaining: 0 })
   return (
     <div className="grid gap-1" style={{ gridTemplateRows: 'repeat(6, 1fr)' }}>
       {rows.map((row, r) => (
@@ -181,6 +214,14 @@ function MiniGrid({ steps }: { steps: SolveSummary['steps'] }) {
   )
 }
 
+/**
+ * The MiniCandidates function in TypeScript React displays a list of remaining candidates with their
+ * corresponding guesses and remaining words.
+ * @param  - The `MiniCandidates` component takes a prop `steps` which is an array of objects with the
+ * following structure:
+ * @returns The MiniCandidates component is being returned. It displays a list of remaining candidates
+ * with their corresponding guesses and remaining words.
+ */
 function MiniCandidates({ steps }: { steps: SolveSummary['steps'] }) {
   return (
     <div className="min-w-[220px]">

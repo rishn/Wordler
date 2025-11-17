@@ -2,12 +2,20 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { saveThemePreference, getThemePreference, type Theme } from '../lib/themeService'
 
+/**
+ * The function `applyTheme` toggles a 'dark' class on the root element of the document based on the
+ * boolean parameter `dark`.
+ * @param {boolean} dark - The `dark` parameter is a boolean value that determines whether to apply a
+ * dark theme or not. If `dark` is `true`, the function adds a CSS class `dark` to the root element of
+ * the document to apply the dark theme.
+ */
 function applyTheme(dark: boolean) {
   const root = document.documentElement
   if (dark) root.classList.add('dark')
   else root.classList.remove('dark')
 }
 
+/* The `ThemeToggle` component is responsible for toggling between dark and light themes. */
 export default function ThemeToggle() {
   const { user } = useAuth()
   const [dark, setDark] = useState(false)

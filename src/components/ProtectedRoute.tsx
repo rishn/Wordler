@@ -2,6 +2,16 @@ import { ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
+/**
+ * The function `ProtectedRoute` renders loading spinner if user is still loading, redirects to login
+ * page if user is not authenticated, and displays children components if user is authenticated.
+ * @param  - The `ProtectedRoute` function is a React component that acts as a wrapper for routes that
+ * require authentication. It takes a `children` prop, which represents the components or content that
+ * should be rendered within the protected route.
+ * @returns If the `loading` state is true, a loading spinner with the text "Loading..." is displayed.
+ * If the `user` is not authenticated, the user is redirected to the login page. Otherwise, the
+ * `children` components are rendered.
+ */
 export default function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth()
 

@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom'
 import { simulate } from '../lib/simulate'
 import AnimatedGridBackground from '../components/AnimatedGridBackground'
 import { useAuth } from '../contexts/AuthContext'
-import { saveAttempt, migrateLocalStorageToFirestore } from '../lib/historyService'
+import { saveAttempt, migrateLocalStorageToFirestore, getHistory } from '../lib/historyService'
 import { getWordLists } from '../lib/wordlistLoader'
 
 export default function App() {
@@ -28,6 +28,101 @@ export default function App() {
   const nytSourceRef = useRef<EventSource | null>(null)
   const [nytApiAvailable, setNytApiAvailable] = useState<'unknown'|'up'|'down'>('unknown')
   const [nytApiError, setNytApiError] = useState<string>('')
+  const [nytSolvedToday, setNytSolvedToday] = useState(false)
+  const etMidnightTimerRef = useRef<number | null>(null)
+
+  // Helpers: ET day string and next ET midnight
+  function etDateString(ts: number): string {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(new Date(ts))
+    const y = parts.find(p => p.type === 'year')?.value || '0000'
+    const m = parts.find(p => p.type === 'month')?.value || '00'
+    const d = parts.find(p => p.type === 'day')?.value || '00'
+    return `${y}-${m}-${d}`
+  }
+
+  /**
+   * The function calculates the milliseconds until the next Eastern Time midnight from a given
+   * timestamp or the current time.
+   * @param {number} [fromTs] - The `fromTs` parameter in the `msUntilNextEtMidnight` function is an
+   * optional parameter that represents a timestamp in milliseconds. It is used to calculate the
+   * milliseconds until the next Eastern Time (ET) midnight from the specified timestamp. If no
+   * `fromTs` value is provided, the
+   * @returns The function `msUntilNextEtMidnight` returns the number of milliseconds until the next
+   * Eastern Time (ET) midnight from the provided timestamp or the current time if no timestamp is
+   * provided.
+   */
+  function msUntilNextEtMidnight(fromTs?: number): number {
+    const now = new Date(fromTs ?? Date.now())
+    // Compute via Intl by getting the target ET midnight timestamp by comparing ET day strings
+    // Fallback: recompute using parts for today and probe forward until day changes
+    // Simpler robust approach: iterate forward in minutes until ET date changes
+    let probe = now.getTime()
+    const todayEt = etDateString(probe)
+    // Cap to avoid long loops
+    const maxProbeMs = 48 * 60 * 60 * 1000
+    const step = 60 * 1000
+    let elapsed = 0
+    while (elapsed <= maxProbeMs) {
+      probe += step
+      if (etDateString(probe) !== todayEt) break
+      elapsed += step
+    }
+    return Math.max(1_000, probe - now.getTime())
+  }
+
+  /**
+   * The function `localKey` generates a key based on a user ID or defaults to 'anon'.
+   * @param {string} [userId] - The `userId` parameter is a string that represents the user's unique
+   * identifier. If a `userId` is provided, it will be used in the key generation. If no `userId` is
+   * provided, the default value 'anon' will be used instead.
+   * @returns The function `localKey` is returning a string that is a concatenation of the prefix
+   * "nyt_last_success_" and the `userId` parameter if it is provided, or the string 'anon' if `userId`
+   * is not provided.
+   */
+  function localKey(userId?: string) {
+    return `nyt_last_success_${userId || 'anon'}`
+  }
+
+  /**
+   * This function attempts to load a specific user's data from local storage and returns it if
+   * successful.
+   * @param {string} [userId] - The `userId` parameter is an optional string that represents the user
+   * ID used to retrieve data from local storage.
+   * @returns The function `loadLocalNytSuccess` returns an object with properties `ts` and `summary`
+   * if the parsed data from local storage contains a number for `ts` and a truthy value for `summary`.
+   * Otherwise, it returns `null`.
+   */
+  function loadLocalNytSuccess(userId?: string): { ts: number, summary: SolveSummary } | null {
+    try {
+      const raw = localStorage.getItem(localKey(userId))
+      if (!raw) return null
+      const parsed = JSON.parse(raw)
+      if (parsed && typeof parsed.ts === 'number' && parsed.summary) return parsed
+    } catch {}
+    return null
+  }
+
+  /**
+   * The function `saveLocalNytSuccess` saves a timestamp and a summary object to local storage as a
+   * JSON string.
+   * @param {number} ts - The `ts` parameter is a number representing a timestamp.
+   * @param {SolveSummary} summary - The `summary` parameter is of type `SolveSummary`, which likely
+   * contains information related to a solved problem or task. It is being stored along with a
+   * timestamp (`ts`) in the local storage using `localStorage.setItem`.
+   * @param {string} [userId] - The `userId` parameter is an optional string that represents the user
+   * ID associated with the data being saved. It is used to differentiate data saved for different
+   * users in local storage.
+   */
+  function saveLocalNytSuccess(ts: number, summary: SolveSummary, userId?: string) {
+    try {
+      localStorage.setItem(localKey(userId), JSON.stringify({ ts, summary }))
+    } catch {}
+  }
 
   // Load word lists from backend (with fallback to local)
   useEffect(() => {
@@ -64,6 +159,68 @@ export default function App() {
     return () => { cancelled = true }
   }, [])
 
+  // Determine if today's NYT is already solved (ET) and keep it displayed
+  useEffect(() => {
+    let cancelled = false
+    async function refresh() {
+      const todayEt = etDateString(Date.now())
+      // Prefer Firestore when logged in
+      if (user) {
+        try {
+          const hist = await getHistory(user.uid)
+          const todaySuccess = hist.find(h => h.mode === 'nyt' && h.summary?.success && etDateString(h.ts) === todayEt)
+          if (cancelled) return
+          if (todaySuccess) {
+            setNytResult(todaySuccess.summary)
+            setNytSolvedToday(true)
+            saveLocalNytSuccess(todaySuccess.ts, todaySuccess.summary, user.uid)
+          } else {
+            setNytSolvedToday(false)
+            // Clear only if not actively running
+            if (!nytRunning) setNytResult(null)
+          }
+        } catch {
+          // Fallback to local if Firestore fails
+          const local = loadLocalNytSuccess(user.uid)
+          if (local && etDateString(local.ts) === todayEt) {
+            setNytResult(local.summary)
+            setNytSolvedToday(true)
+          } else {
+            setNytSolvedToday(false)
+            if (!nytRunning) setNytResult(null)
+          }
+        }
+      } else {
+        // Anonymous/local fallback
+        const local = loadLocalNytSuccess(undefined)
+        if (local && etDateString(local.ts) === todayEt) {
+          setNytResult(local.summary)
+          setNytSolvedToday(true)
+        } else {
+          setNytSolvedToday(false)
+          if (!nytRunning) setNytResult(null)
+        }
+      }
+
+      // Schedule re-check at next ET midnight
+      if (etMidnightTimerRef.current) {
+        window.clearTimeout(etMidnightTimerRef.current)
+      }
+      etMidnightTimerRef.current = window.setTimeout(() => {
+        // On day rollover, refresh state
+        if (!cancelled) {
+          refresh()
+        }
+      }, msUntilNextEtMidnight())
+    }
+    refresh()
+    return () => {
+      cancelled = true
+      if (etMidnightTimerRef.current) window.clearTimeout(etMidnightTimerRef.current)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
+
   // Debug: print decision rationale for each step
   function logDebugSteps(title: string, steps: GuessResult[]) {
     try {
@@ -87,14 +244,22 @@ export default function App() {
     } catch {}
   }
 
+  /**
+   * The `clearNyt` function closes the current NYT source, clears the logs, and sets the running state
+   * to false.
+   */
   const clearNyt = () => {
     nytSourceRef.current?.close()
     nytSourceRef.current = null
-    setNytResult(null)
+    // Do not clear persisted result; we want it visible throughout the day
     setNytLogs([])
     setNytRunning(false)
   }
 
+  /**
+   * The `runSolve` function sets up a simulation, clears previous results, runs the simulation, saves
+   * the results to Firestore if a user is logged in, and then updates the state accordingly.
+   */
   const runSolve = () => {
     setRunning(true)
     setSimResult(null) // Clear simulation result
@@ -120,6 +285,10 @@ export default function App() {
     }, 10)
   }
 
+  /**
+   * The function `runNytSolve` sets up a connection to a server-sent events (SSE) endpoint for solving
+   * New York Times (NYT) puzzles, handling log messages, steps, completion, and errors.
+   */
   const runNytSolve = () => {
     // Clear other UIs
     setSummary(null)
@@ -170,6 +339,12 @@ export default function App() {
         const answer = data.answer || (success && steps.length ? steps[steps.length - 1].guess : '') || ''
         const summary: SolveSummary = { success, answer, steps: [...steps] }
         setNytResult(summary)
+        // If solved successfully, persist and disable button for the day
+        if (success) {
+          const ts = Date.now()
+          setNytSolvedToday(true)
+          saveLocalNytSuccess(ts, summary, user?.uid)
+        }
         // Save to Firestore
         if (user) {
           saveAttempt(user.uid, {
@@ -190,12 +365,21 @@ export default function App() {
       } catch {
         setNytLogs(prev => [...prev, 'Stream error'])
       }
-      setNytApiError('The NYT solver server may be waking up (free tier). If it just deployed or was idle, it can take ~20–60s to start. Please retry shortly.')
+      setNytApiError('The NYT solver server may be down. Please retry shortly.')
       setNytRunning(false)
       es.close(); nytSourceRef.current = null
     })
   }
 
+  /**
+   * The function `runSimulate` takes a user input, validates it, runs a simulation, logs debug steps,
+   * saves the result to Firestore if a user is logged in, and updates state variables accordingly.
+   * @returns The `runSimulate` function is returning a Promise that resolves after a timeout of 10
+   * milliseconds. Within this function, it performs various operations such as validating user input,
+   * setting simulation running state, clearing previous results, running a simulation, logging debug
+   * steps, saving the simulation result to Firestore if a user is logged in, and finally setting the
+   * simulation running state to false.
+   */
   const runSimulate = () => {
     const a = userAnswer.trim().toLowerCase()
     if (!/^[a-z]{5}$/.test(a)) {
@@ -259,27 +443,32 @@ export default function App() {
           <div className="absolute top-0 left-0 right-0 h-[284px] bg-white/60 dark:bg-zinc-900/20 backdrop-blur-05 z-7" />
           <div className="max-w-4xl mx-auto px-6 py-12 text-center relative z-10">
             <h2 className="text-2xl md:text-3xl font-semibold">Solve Today’s NYT Wordle</h2>
-            <p className="mt-2 text-sm md:text-base text-gray-700 dark:text-gray-300">Watch the solver play the official NYT Wordle in real time. We’ll show the board as it updates and a simple status of what’s happening.</p>
+            <p className="mt-2 text-sm md:text-base text-gray-700 dark:text-gray-300">Watch the solver play the official NYT Wordle in real time (Eastern Time Zone). We'll show the board as it updates and a simple status of what's happening.</p>
             {/* Backend status notice */}
             {nytApiAvailable === 'down' && (
               <div className="mt-3 text-xs text-amber-700 dark:text-amber-300 bg-amber-100/80 dark:bg-amber-900/30 border border-amber-300/60 dark:border-amber-700/60 rounded p-2">
-                The NYT solver server seems unavailable right now. On the free tier it may be sleeping and can take ~20–60s to wake up. Try again in a moment.
+                The NYT solver server seems unavailable right now. Try again in a moment.
               </div>
             )}
             <div className="mt-6">
               <button
                 onClick={runNytSolve}
-                disabled={nytRunning}
+                disabled={nytRunning || nytSolvedToday}
                 className="px-5 py-2.5 rounded-lg bg-emerald-600 text-white font-medium disabled:opacity-50 shadow hover:bg-emerald-500 hover:scale-105 transition-all"
-                title="Runs a local headless browser to solve today's Wordle"
+                title={nytSolvedToday ? "Already solved today (Eastern Time). Try again after midnight ET." : "Runs a local headless browser to solve today's Wordle"}
               >
-                {nytRunning ? 'Solving…' : 'Start NYT Solve'}
+                {nytRunning ? 'Solving…' : (nytSolvedToday ? 'Solved for Today' : 'Start NYT Solve')}
               </button>
             </div>
+            {nytSolvedToday && !nytRunning && (
+              <div className="mt-3 text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-100/70 dark:bg-emerald-900/30 border border-emerald-300/60 dark:border-emerald-700/60 rounded p-2">
+                Today’s Wordle is already solved for your account (Eastern Time). The button will unlock after ET midnight.
+              </div>
+            )}
             {(nytRunning || nytResult) && (
               <div className="mt-3 flex flex-col items-center gap-6">
                 {nytResult && (
-                  <div className="text-sm mt-20">
+                  <div className={`text-sm mt-${nytSolvedToday && !nytRunning ? 10 : 20}`}>
                     {nytRunning ? (
                       <span>Solving…</span>
                     ) : (
@@ -296,15 +485,17 @@ export default function App() {
                   <GridDisplay steps={nytResult?.steps || []} variant="nyt" />
                   <CandidatesPanel steps={nytResult?.steps || []} />
                 </div>
-                {/* Friendly logs */}
-                <div className="w-full max-w-2xl mx-auto p-3 rounded border dark:border-zinc-700 max-h-44 overflow-auto text-xs bg-white/60 dark:bg-zinc-800/60 backdrop-blur">
-                  {nytLogs.slice(-10).map((l, i) => (
-                    <div key={i}>• {l}</div>
-                  ))}
-                  {nytApiError && (
-                    <div className="mt-2 text-amber-700 dark:text-amber-300">{nytApiError}</div>
-                  )}
-                </div>
+                {/* Friendly logs: visible only while a NYT attempt is running */}
+                {nytRunning && (
+                  <div className="w-full max-w-2xl mx-auto p-3 rounded border dark:border-zinc-700 max-h-44 overflow-auto text-xs bg-white/60 dark:bg-zinc-800/60 backdrop-blur">
+                    {nytLogs.slice(-10).map((l, i) => (
+                      <div key={i}>• {l}</div>
+                    ))}
+                    {nytApiError && (
+                      <div className="mt-2 text-amber-700 dark:text-amber-300">{nytApiError}</div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -407,7 +598,7 @@ export default function App() {
           </div>
         </section>
       </main>
-      <footer className="fixed bottom-0 left-0 right-0 z-50 py-6 text-center text-xs text-gray-600 dark:text-gray-400 bg-[#f5f5f5] dark:bg-[#18181b]">Wordler © 2025</footer>
+      <footer className="fixed bottom-0 left-0 right-0 z-50 py-6 text-center text-xs text-gray-600 dark:text-gray-400 bg-[#f5f5f5] dark:bg-[#18181b]">Wordler by Educify™ An EduTech Enterprise 2025</footer>
       <div className="pb-[60px]" /> {/* Spacer for fixed footer */}
     </div>
   )
@@ -425,51 +616,12 @@ function simplifyLog(msg: string): string | null {
   return msg
 }
 
-function SolveDisplay({ summary }: { summary: SolveSummary }) {
-  return (
-    <div className="space-y-4">
-  <h2 className="text-lg font-semibold">Result: <span className={summary.success ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>{summary.success ? 'Solved' : 'Failed'}</span> in {summary.steps.length} tries</h2>
-      <p className="text-sm">Answer: <span className="font-mono font-bold">{summary.answer}</span></p>
-      <table className="w-full border-collapse">
-        <thead>
-          <tr className="text-left border-b dark:border-zinc-700">
-            <th className="py-1 pr-2">#</th>
-            <th className="py-1 pr-2">Guess</th>
-            <th className="py-1 pr-2">Pattern</th>
-            <th className="py-1 pr-2">Remaining</th>
-          </tr>
-        </thead>
-        <tbody>
-          {summary.steps.map((s: GuessResult, i: number) => (
-            <tr key={i} className="border-b dark:border-zinc-800">
-              <td className="py-1 pr-2 text-sm">{i + 1}</td>
-              <td className="py-1 pr-2 font-mono">{s.guess}</td>
-              <td className="py-1 pr-2 font-mono">
-                {s.pattern.map((c, idx) => (
-                  <span
-                    key={idx}
-                    className={
-                      'inline-block w-6 h-6 text-center rounded text-xs font-bold mr-1 ' +
-                      (c === 'g'
-                        ? 'bg-green-600 text-white'
-                        : c === 'y'
-                        ? 'bg-yellow-500 text-white'
-                        : 'bg-gray-400 dark:bg-gray-600 text-white')
-                    }
-                  >
-                    {c.toUpperCase()}
-                  </span>
-                ))}
-              </td>
-              <td className="py-1 pr-2 text-sm">{s.remaining}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
 
+/**
+ * The function `GridDisplay` in TypeScript React renders a grid display of guesses with different
+ * colors based on the pattern and variant.
+ * @param  - The `GridDisplay` function takes in an object with two properties:
+ */
 function GridDisplay({ steps, variant = 'nyt' }: { steps: GuessResult[]; variant?: 'nyt' | 'other' }) {
   const rows: GuessResult[] = Array.from({ length: 6 }, (_, i) => steps[i] || { guess: '', pattern: ['b','b','b','b','b'], remaining: 0 })
   return (
@@ -496,6 +648,16 @@ function GridDisplay({ steps, variant = 'nyt' }: { steps: GuessResult[]; variant
   )
 }
 
+/**
+ * The function `CandidatesPanel` displays a list of candidates with their guesses and remaining
+ * possibilities in a React component.
+ * @param  - The `CandidatesPanel` component takes a prop `steps` which is an array of `GuessResult`
+ * objects. Each `GuessResult` object contains information about a guess, such as the guessed word and
+ * the remaining possibilities.
+ * @returns The `CandidatesPanel` function returns either a panel displaying the remaining candidates
+ * with their guesses and remaining possibilities, or a message indicating that guesses will appear
+ * once they are available if there are no steps provided.
+ */
 function CandidatesPanel({ steps }: { steps: GuessResult[] }) {
   if (!steps.length) {
     return (
@@ -524,6 +686,21 @@ function CandidatesPanel({ steps }: { steps: GuessResult[] }) {
   )
 }
 
+/**
+ * The type `FiveLetterInputProps` defines the props expected by a component in a TypeScript React
+ * application for handling a five-letter input field.
+ * @property {string[]} cells - An array of strings representing the current values in the input cells.
+ * @property setCells - The `setCells` property is a function that takes an array of strings as an
+ * argument and updates the `cells` state with the new array.
+ * @property inputsRef - The `inputsRef` property in the `FiveLetterInputProps` type is a
+ * `MutableRefObject` that holds an array of `HTMLInputElement` elements or `null` values. This allows
+ * you to reference and interact with input elements in a mutable way within your component.
+ * @property setHasTyped - The `setHasTyped` property is a function that takes a boolean parameter and
+ * is used to update a state or variable that tracks whether the user has typed anything in the input
+ * cells.
+ * @property setUserAnswer - The `setUserAnswer` property is a function that takes a string as an
+ * argument and is used to update the user's answer in the component.
+ */
 type FiveLetterInputProps = {
   cells: string[]
   setCells: (v: string[]) => void
@@ -532,6 +709,11 @@ type FiveLetterInputProps = {
   setUserAnswer: (v: string) => void
 }
 
+/* The below code is a React functional component called FiveLetterInput that renders a row of five
+input fields. Each input field allows the user to enter a single letter. The component keeps track
+of the entered letters in the 'cells' state array. It also provides functionality to navigate
+between input fields using the arrow keys and backspace key. The 'setUserAnswer' function is called
+whenever the 'cells' state array changes to update the user's answer. */
 function FiveLetterInput({ cells, setCells, inputsRef, setHasTyped, setUserAnswer }: FiveLetterInputProps) {
   useEffect(() => {
     setUserAnswer(cells.join(''))

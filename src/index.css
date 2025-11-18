@@ -27,3 +27,34 @@ html {
 .animate-gradient-flow {
   animation: gradient-flow 10s ease infinite;
 }
+
+/* Mobile sidebar slide-in */
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slideInLeft {
+  animation: slideInLeft 0.3s ease-out both;
+}
+
+@keyframes slideOutLeft {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+.animate-slideOutLeft {
+  animation: slideOutLeft 0.25s ease-in forwards;
+}

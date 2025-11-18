@@ -461,14 +461,14 @@ export default function App() {
               </button>
             </div>
             {nytSolvedToday && !nytRunning && (
-              <div className="mt-3 text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-100/70 dark:bg-emerald-900/30 border border-emerald-300/60 dark:border-emerald-700/60 rounded p-2">
+              <div className="mt-3 text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-100/70 dark:bg-emerald-900/30 border border-emerald-300/60 dark:border-emerald-700/60 rounded p-2 -mb-10">
                 Today’s Wordle is already solved for your account (Eastern Time). The button will unlock after ET midnight.
               </div>
             )}
             {(nytRunning || nytResult) && (
               <div className="mt-3 flex flex-col items-center gap-6">
                 {nytResult && (
-                  <div className={`text-sm mt-${nytSolvedToday && !nytRunning ? 10 : 20}`}>
+                  <div className="text-sm mt-20">
                     {nytRunning ? (
                       <span>Solving…</span>
                     ) : (

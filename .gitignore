@@ -33,8 +33,10 @@ Desktop.ini
 # Firebase hosting/cache
 .firebase/
 
-# Images
+# Media
 Wordler.png
+assets/Wordler Desktop Demo.mp4
+assets/Wordler Mobile Demo.mp4
 
 # Metadata and Logs
 FIREBASE_SETUP.md

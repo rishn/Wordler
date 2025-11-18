@@ -1,8 +1,7 @@
 # <img src="assets/Logo.png" alt="Wordler logo" width="22" height="22" /> Wordler
 
-<!-- Logo (place `assets/Logo.png` here) -->
 <p align="center">
-  <img src="assets/WordlerAnimation.gif" alt="Wordler logo" width="160" height="160" />
+  <img src="assets/WordlerAnimation.gif" alt="Wordler logo" width="200" height="200" />
 </p>
 
 <p align="center">
@@ -33,13 +32,21 @@ A compact, practical Wordle solver and demo UI built with Vite, React and TypeSc
 
 ## Demos
 
-- NYT live solver (SSE stream)
+- NYT Live Solve Desktop Demo 
 
-  ![NYT demo placeholder](assets/demo-nyt.gif)
+<p align="center">
+  <a href="https://drive.google.com/file/d/1yhkJDbxSnVDXb7AkX55RWUg8g0uDXv4A/view?usp=sharing" target="_blank" rel="noopener noreferrer">
+    <img src="https://github.com/user-attachments/assets/d29b38d8-dd03-4deb-a106-2f70c9598f32" alt="NYT live demo" width="600" />
+  </a>
+</p>
 
 - Simulation / Random solve UI
 
-  ![Simulation demo placeholder](assets/demo-sim.gif)
+<p align="center">
+  <a href="https://drive.google.com/file/d/1ga3iwcc8LCjjh_FnAvj6oEhtdc0C3nyq/view?usp=sharing" target="_blank" rel="noopener noreferrer">
+    <img src="https://github.com/user-attachments/assets/5039ee3e-03b1-42a0-b2ec-9f5056c39bef" alt="NYT live demo" width="600" />
+  </a>
+</p>
 
 ---
 

@@ -12,6 +12,7 @@
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-339933?logo=node.js&logoColor=white" />
   <img alt="Express" src="https://img.shields.io/badge/Express-000000?logo=express&logoColor=white" />
   <img alt="Playwright" src="https://img.shields.io/badge/Playwright-ff4154?logo=playwright&logoColor=white" />
+  <img alt="GitHub Actions" src="https://img.shields.io/badge/GitHub%20Actions-2088FF?logo=githubactions&logoColor=white" />
   <img alt="Docker" src="https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white" />
   <img alt="Render" src="https://img.shields.io/badge/Render-20232A?logo=render&logoColor=white" />
   <img alt="Firebase" src="https://img.shields.io/badge/Firebase-FFCA28?logo=firebase&logoColor=black" />
@@ -66,7 +67,7 @@ The UI shows each guess, the G/Y/B pattern, remaining candidate count, and optio
 
 - **Frontend:** React, Vite, TypeScript, Tailwind CSS
 - **Server:** Node, Express, Playwright (Chromium) for automation
-- **Dev & deploy:** Docker (Playwright base), Render (API host), Git
+- **Dev & Deployment:** Docker (Playwright base), Render (API host), Git, GitHub Actions (CI/CD)
 - **Firebase:** Authentication, Firestore (Database), Hosting, Firebase CLI, Web App
 
 ---
@@ -80,6 +81,7 @@ The UI shows each guess, the G/Y/B pattern, remaining candidate count, and optio
  - **Wordle usage history:** the app records past solves and attempts and displays them in a History view (persisted to Firestore per-user or localStorage for anonymous users).
  - **UI theme toggles:** built-in light/dark theme switch with persisted user preference for a consistent experience across sessions.
  - **Server:** exposes canonical wordlists and a realtime SSE endpoint for live solves; packaged as a Docker image (Playwright base) for reliable deployments on Render or any Docker host.
+ - **CI/CD:** GitHub Actions workflows build the frontend and deploy to Firebase Hosting on push.
 
 ---
 
@@ -148,20 +150,10 @@ To use Authentication and Firestore locally you must create a Firebase project a
 
 Without these values Authentication and Firestore features will not work. For safe local development you can also run the Firebase Emulators (Auth + Firestore) and point your app at the emulators using the Firebase CLI and emulator host/port overrides.
 
-Quick Firebase checklist:
+Firebase checklist:
 
 - In the Firebase Console enable Authentication and add the Email/Password sign-in provider so users can sign up and sign in.
-- Create and enable a Firestore Database for the project (use test mode for quick local development, then tighten rules for production).
-- (Optional) Use the Firebase Emulators for Auth and Firestore during development to avoid touching production data.
-
-Hosting: to deploy the frontend via Firebase Hosting, use the Firebase CLI to initialize hosting and deploy:
-
-```powershell
-# from project root
-npx firebase login
-npx firebase init hosting
-npx firebase deploy --only hosting
-```
+- Create and enable a Firestore Database for the project.
 
 ### Project Layout
 
@@ -169,7 +161,6 @@ npx firebase deploy --only hosting
 src/                 # Frontend app (Vite + React + TS)
   lib/solver.ts      # Core solver
   lib/wordleTypes.ts
-  lib/wordlists/     # shipped samples
 pages/
 components/
 

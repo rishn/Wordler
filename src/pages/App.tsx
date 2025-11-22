@@ -442,7 +442,7 @@ export default function App() {
           <div className="absolute top-0 left-0 right-0 h-[284px] bg-white/60 dark:bg-zinc-900/20 backdrop-blur-05 z-7" />
           <div className="max-w-4xl mx-auto px-6 py-12 text-center relative z-10">
             <h2 className="text-2xl md:text-3xl font-semibold">Solve Today’s NYT Wordle</h2>
-            <p className="mt-2 text-sm md:text-base text-gray-700 dark:text-gray-300">Watch the solver play the official NYT Wordle in real time (Eastern Time Zone). We'll show the board as it updates and a simple status of what's happening.</p>
+            <p className="mt-2 text-sm md:text-base text-gray-700 dark:text-gray-300">Watch the solver play the official <a href="https://www.nytimes.com/games/wordle/index.html" className="text-[#6AAA64] bg-white/70 dark:bg-zinc-900/20 hover:text-[#C9B458] hover:bg-white/80 dark:hover:bg-zinc-900/30 transition-colors" target="_blank" rel="noopener noreferrer">NYT Wordle</a> in real time (Eastern Time Zone). We'll show the board as it updates and a simple status of what's happening.</p>
             {/* Backend status notice */}
             {nytApiAvailable === 'down' && (
               <div className="mt-3 text-xs text-amber-700 dark:text-amber-300 bg-amber-100/80 dark:bg-amber-900/30 border border-amber-300/60 dark:border-amber-700/60 rounded p-2">

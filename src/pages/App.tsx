@@ -315,7 +315,7 @@ export default function App() {
         const prev = [...steps]
         const cands = filterCandidates(prev)
         const d = computePickDetails(data.guess, cands, prev)
-        console.groupCollapsed(`[NYT] #${steps.length + 1} ${data.guess.toUpperCase()} — score ${d.score.toFixed(3)}`)
+        console.groupCollapsed(`[NYT] #${steps.length + 1} ${data.guess.toUpperCase()}`)
         console.log('entropy:', d.entropy.toFixed(3))
         console.log('coverage:', d.coverage.toFixed(3))
         console.log('newLetterBonus:', d.newLetterBonus.toFixed(3))

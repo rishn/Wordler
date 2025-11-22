@@ -16,7 +16,8 @@ const cache: WordlistCache = {
   error: null
 }
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000'
+const API_BASE = (import.meta as any).env?.VITE_API_BASE || ''
+const apiUrl = (path: string) => (API_BASE ? `${API_BASE.replace(/\/$/, '')}${path}` : path)
 
 /**
  * Fetch word lists from backend or use local fallback.
@@ -46,11 +47,11 @@ export async function getWordLists(): Promise<{ answers: string[]; allowed: stri
   try {
     // Try to fetch from backend
     const [answersRes, allowedRes] = await Promise.all([
-      fetch(`${BACKEND_URL}/wordlists/answers.json`, { 
+      fetch(apiUrl(`/wordlists/answers.json`), {
         signal: AbortSignal.timeout(5000),
         headers: { 'Accept': 'application/json' }
       }),
-      fetch(`${BACKEND_URL}/wordlists/allowed.json`, { 
+      fetch(apiUrl(`/wordlists/allowed.json`), {
         signal: AbortSignal.timeout(5000),
         headers: { 'Accept': 'application/json' }
       })
@@ -63,8 +64,8 @@ export async function getWordLists(): Promise<{ answers: string[]; allowed: stri
       ])
 
       // Validate data structure
-      if (Array.isArray(answers) && Array.isArray(allowed) && 
-          answers.length > 0 && allowed.length > 0) {
+      if (Array.isArray(answers) && Array.isArray(allowed) &&
+        answers.length > 0 && allowed.length > 0) {
         cache.answers = answers
         cache.allowed = allowed
         cache.loading = false

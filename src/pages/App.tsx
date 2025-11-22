@@ -50,9 +50,8 @@ export default function App() {
    * timestamp or the current time.
    * @param {number} [fromTs] - The `fromTs` parameter in the `msUntilNextEtMidnight` function is an
    * optional parameter that represents a timestamp in milliseconds. It is used to calculate the
-   * milliseconds until the next Eastern Time (ET) midnight from the specified timestamp. If no
-   * `fromTs` value is provided, the
-   * @returns The function `msUntilNextEtMidnight` returns the number of milliseconds until the next
+   * milliseconds until the next Eastern Time (ET) midnight from the specified timestamp.
+   * @returns The function returns the number of milliseconds until the next
    * Eastern Time (ET) midnight from the provided timestamp or the current time if no timestamp is
    * provided.
    */

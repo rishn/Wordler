@@ -18,7 +18,7 @@
   <img alt="Firebase" src="https://img.shields.io/badge/Firebase-FFCA28?logo=firebase&logoColor=black" />
 </p>
 
-A compact, practical Wordle solver and demo UI built with Vite, React and TypeScript. Wordler implements an entropy-based, deterministic solver (no ML) that shows full decision steps and can optionally drive the official NYT Wordle using Playwright for live demos.
+A compact, practical Wordle solver and demo UI built with Vite, React and TypeScript. Wordler implements an entropy-based, deterministic solver that shows full decision steps and can optionally drive the official NYT Wordle using Playwright for live demos.
 
 
 ![Home screenshot](assets/HomeDark.png)
@@ -41,7 +41,7 @@ A compact, practical Wordle solver and demo UI built with Vite, React and TypeSc
   </a>
 </p>
 
-- Simulation / Random solve UI
+- Simulation / Random Solve Mobile Demo
 
 <p align="center">
   <a href="https://drive.google.com/file/d/1ga3iwcc8LCjjh_FnAvj6oEhtdc0C3nyq/view?usp=sharing" target="_blank" rel="noopener noreferrer">
